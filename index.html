@@ -20,10 +20,10 @@
 
     #tree-problems-bar {
       width: 800px;
-      position: relative; /* tooltip relative container */
+      position: relative;
     }
 
-    /* WIDE, STABLE TOOLTIP */
+    /* WIDER TOOLTIP — WILL NOT WRAP */
     .bar-tooltip {
       position: absolute;
       pointer-events: none;
@@ -31,14 +31,14 @@
       border: 1px solid #ccc;
       border-radius: 4px;
       padding: 8px 12px;
-      width: 260px;          /* <<< wide so text stays on one line */
+      width: 260px;          /* <<< WIDER TOOLTIP */
       min-height: 60px;
       font-size: 15px;
       font-family: "PT Serif", serif;
       box-shadow: 0 2px 6px rgba(0,0,0,0.1);
       opacity: 0;
       transition: opacity 0.15s ease;
-      white-space: normal;
+      white-space: normal;    /* allow wrapping only if truly needed */
       z-index: 999;
     }
   </style>
@@ -48,11 +48,9 @@
   <div id="tree-problems-bar"></div>
 
   <script>
-    /* CSV SOURCE */
     const csvUrl =
       "https://dl.dropboxusercontent.com/scl/fi/w9u4co85e6w9ml9qz91yr/Data-Reduced-for-Bar-Graph.csv?rlkey=cjd6qyn2014mddpcbnbdywhcy&st=qhrtzlor";
 
-    /* COLUMN MAPPING */
     const problemColumns = [
       { key: "guards",      label: "Guards" },
       { key: "root_stone",  label: "Stone in Roots" },
@@ -71,15 +69,10 @@
 
     d3.csv(csvUrl).then(rows => {
       const total = rows.length;
-
       const data = problemColumns.map(col => {
-        const yesCount = rows.filter(r => isYes(r[col.key])).length;
-        return {
-          problem: col.label,
-          percent: (yesCount / total) * 100
-        };
+        const yes = rows.filter(r => isYes(r[col.key])).length;
+        return { problem: col.label, percent: (yes / total) * 100 };
       });
-
       drawBarChart(data);
     });
 
@@ -100,7 +93,6 @@
       const g = svg.append("g")
         .attr("transform", `translate(${margin.left},${margin.top})`);
 
-      /* SCALES */
       const x = d3.scaleBand()
         .domain(data.map(d => d.problem))
         .range([0, innerW])
@@ -110,7 +102,6 @@
         .domain([0, d3.max(data, d => d.percent)]).nice()
         .range([innerH, 0]);
 
-      /* AXES */
       g.append("g")
         .attr("transform", `translate(0,${innerH})`)
         .call(d3.axisBottom(x))
@@ -126,7 +117,6 @@
           .style("font-family", "PT Serif")
           .style("font-size", "13px");
 
-      /* TOOLTIP */
       const tooltip = container.append("div")
         .attr("class", "bar-tooltip");
 
@@ -134,7 +124,6 @@
       const tooltipHeight = 80;
       const padding = 10;
 
-      /* BARS */
       g.selectAll("rect")
         .data(data)
         .enter()
@@ -146,14 +135,11 @@
           .attr("fill", "#4b8b3b")
           .on("mousemove", (event, d) => {
 
-            /* FIX: Remove hidden line breaks from labels */
-            const cleanLabel = d.problem.replace(/\r?\n|\r/g, " ");
-
             const rect = containerNode.getBoundingClientRect();
             let xPos = event.clientX - rect.left + 15;
             let yPos = event.clientY - rect.top + 15;
 
-            /* CLAMP X */
+            // clamp left/right
             if (xPos + tooltipWidth > rect.width - padding) {
               xPos = rect.width - tooltipWidth - padding;
             }
@@ -161,7 +147,7 @@
               xPos = padding;
             }
 
-            /* CLAMP Y */
+            // clamp top/bottom
             if (yPos + tooltipHeight > rect.height - padding) {
               yPos = rect.height - tooltipHeight - padding;
             }
@@ -171,7 +157,7 @@
 
             tooltip
               .html(
-                `<strong>Problem Type:</strong> ${cleanLabel}<br>
+                `<strong>Problem Type:</strong> ${d.problem}<br>
                  <strong>Percentage Yes:</strong> ${d.percent.toFixed(2)}%`
               )
               .style("left", xPos + "px")
