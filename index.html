@@ -131,15 +131,37 @@
           .attr("height", d => innerH - y(d.percent))
           .attr("fill", "#4b8b3b")
           .on("mousemove", (event, d) => {
-            tooltip
-              .html(
-                `<strong>Problem Type:</strong> ${d.problem}<br>` +
-                `<strong>Percentage Yes:</strong> ${d.percent.toFixed(2)}%`
-              )
-              .style("left", (event.offsetX + 15) + "px")
-              .style("top", (event.offsetY + 15) + "px")
-              .style("opacity", 1);
-          })
+  const tooltipWidth = 180;   // estimated tooltip width
+  const tooltipHeight = 60;   // estimated tooltip height
+
+  let xPos = event.offsetX + 15;
+  let yPos = event.offsetY + 15;
+
+  // If tooltip goes off the left edge → flip to right
+  if (xPos < 0) {
+    xPos = event.offsetX + 30;
+  }
+
+  // If tooltip goes off the right edge → flip to left
+  if (xPos + tooltipWidth > 800) {
+    xPos = event.offsetX - tooltipWidth - 15;
+  }
+
+  // If tooltip goes too high, push it down a bit
+  if (yPos < 0) {
+    yPos = event.offsetY + 20;
+  }
+
+  tooltip
+    .html(
+      `<strong>Problem Type:</strong> ${d.problem}<br>` +
+      `<strong>Percentage Yes:</strong> ${d.percent.toFixed(2)}%`
+    )
+    .style("left", xPos + "px")
+    .style("top", yPos + "px")
+    .style("opacity", 1);
+})
+
           .on("mouseleave", () => tooltip.style("opacity", 0));
     }
   </script>
