@@ -23,23 +23,22 @@
       position: relative;
     }
 
-    /* 🔥 FIXED-SIZE TOOLTIP TO PREVENT READYMAG RESIZING */
+    /* WIDER TOOLTIP — WILL NOT WRAP */
     .bar-tooltip {
       position: absolute;
       pointer-events: none;
       background: #ffffff;
       border: 1px solid #ccc;
       border-radius: 4px;
-      padding: 6px 10px;
-      width: 180px;              /* FIXED WIDTH */
-      height: auto;
-      min-height: 60px;          /* FIXED MIN HEIGHT */
-      font-size: 14px;
+      padding: 8px 12px;
+      width: 260px;          /* <<< WIDER TOOLTIP */
+      min-height: 60px;
+      font-size: 15px;
       font-family: "PT Serif", serif;
       box-shadow: 0 2px 6px rgba(0,0,0,0.1);
       opacity: 0;
       transition: opacity 0.15s ease;
-      white-space: normal;
+      white-space: normal;    /* allow wrapping only if truly needed */
       z-index: 999;
     }
   </style>
@@ -49,7 +48,6 @@
   <div id="tree-problems-bar"></div>
 
   <script>
-    /* Updated CSV link */
     const csvUrl =
       "https://dl.dropboxusercontent.com/scl/fi/w9u4co85e6w9ml9qz91yr/Data-Reduced-for-Bar-Graph.csv?rlkey=cjd6qyn2014mddpcbnbdywhcy&st=qhrtzlor";
 
@@ -71,20 +69,17 @@
 
     d3.csv(csvUrl).then(rows => {
       const total = rows.length;
-
       const data = problemColumns.map(col => {
         const yes = rows.filter(r => isYes(r[col.key])).length;
-        return {
-          problem: col.label,
-          percent: (yes / total) * 100
-        };
+        return { problem: col.label, percent: (yes / total) * 100 };
       });
-
       drawBarChart(data);
     });
 
     function drawBarChart(data) {
       const container = d3.select("#tree-problems-bar");
+      const containerNode = container.node();
+
       const width = 800;
       const height = 450;
       const margin = { top: 20, right: 20, bottom: 80, left: 60 };
@@ -122,11 +117,13 @@
           .style("font-family", "PT Serif")
           .style("font-size", "13px");
 
-      /* Tooltip element (fixed size) */
       const tooltip = container.append("div")
         .attr("class", "bar-tooltip");
 
-      /* BARS */
+      const tooltipWidth = 260;
+      const tooltipHeight = 80;
+      const padding = 10;
+
       g.selectAll("rect")
         .data(data)
         .enter()
@@ -137,37 +134,39 @@
           .attr("height", d => innerH - y(d.percent))
           .attr("fill", "#4b8b3b")
           .on("mousemove", (event, d) => {
-            
-            const tooltipWidth = 180; 
-            const offset = 15;
-            let xPos = event.offsetX + offset;
-            let yPos = event.offsetY + offset;
 
-            /* LEFT EDGE CHECK */
-            if (xPos < 10) {
-              xPos = event.offsetX + 30;
+            const rect = containerNode.getBoundingClientRect();
+            let xPos = event.clientX - rect.left + 15;
+            let yPos = event.clientY - rect.top + 15;
+
+            // clamp left/right
+            if (xPos + tooltipWidth > rect.width - padding) {
+              xPos = rect.width - tooltipWidth - padding;
+            }
+            if (xPos < padding) {
+              xPos = padding;
             }
 
-            /* RIGHT EDGE CHECK */
-            if (xPos + tooltipWidth > width - 20) {
-              xPos = event.offsetX - tooltipWidth - 20;
+            // clamp top/bottom
+            if (yPos + tooltipHeight > rect.height - padding) {
+              yPos = rect.height - tooltipHeight - padding;
             }
-
-            /* TOP EDGE CHECK */
-            if (yPos < 10) {
-              yPos = event.offsetY + 30;
+            if (yPos < padding) {
+              yPos = padding;
             }
 
             tooltip
               .html(
-                `<strong>Problem Type:</strong> ${d.problem}<br>` +
-                `<strong>Percentage Yes:</strong> ${d.percent.toFixed(2)}%`
+                `<strong>Problem Type:</strong> ${d.problem}<br>
+                 <strong>Percentage Yes:</strong> ${d.percent.toFixed(2)}%`
               )
               .style("left", xPos + "px")
               .style("top", yPos + "px")
               .style("opacity", 1);
           })
-          .on("mouseleave", () => tooltip.style("opacity", 0));
+          .on("mouseleave", () => {
+            tooltip.style("opacity", 0);
+          });
     }
   </script>
 </body>
