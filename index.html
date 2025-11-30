@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Tree Problem Chart</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+
+  <!-- PT Serif Font -->
+  <link href="https://fonts.googleapis.com/css2?family=PT+Serif:wght@400;700&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: "PT Serif", serif;
+      background: white;
+      margin: 40px auto;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+    }
+
+    #tree-problems-bar {
+      width: 800px;
+      position: relative;
+    }
+
+    .bar-tooltip {
+      position: absolute;
+      pointer-events: none;
+      background: #ffffff;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 6px 10px;
+      font-size: 14px;
+      font-family: "PT Serif", serif;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      opacity: 0;
+      transition: opacity 0.15s ease;
+      white-space: nowrap;
+      z-index: 999;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="tree-problems-bar"></div>
+
+  <script>
+    const csvUrl =
+      "https://dl.dropboxusercontent.com/scl/fi/w9u4co85e6w9ml9qz91yr/Data-Reduced-for-Bar-Graph.csv?rlkey=cjd6qyn2014mddpcbnbdywhcy&st=50981p7s";
+
+    const problemColumns = [
+      { key: "guards",      label: "Guards" },
+      { key: "root_stone",  label: "Stone in Roots" },
+      { key: "root_grate",  label: "Grates in Roots" },
+      { key: "trunk_wire",  label: "Wires in Trunks" },
+      { key: "trnk_light",  label: "Lights in Trunks" },
+      { key: "brch_light",  label: "Lights in Branches" },
+      { key: "brch_shoe",   label: "Shoes in Branches" }
+    ];
+
+    function isYes(x) {
+      if (!x) return false;
+      x = x.toString().trim().toLowerCase();
+      return x === "yes" || x === "y" || x === "1" || x === "true";
+    }
+
+    d3.csv(csvUrl).then(rows => {
+      const total = rows.length;
+
+      const data = problemColumns.map(col => {
+        const yes = rows.filter(r => isYes(r[col.key])).length;
+        return {
+          problem: col.label,
+          percent: (yes / total) * 100
+        };
+      });
+
+      drawBarChart(data);
+    });
+
+    function drawBarChart(data) {
+      const container = d3.select("#tree-problems-bar");
+      const width = 800;
+      const height = 450;
+      const margin = { top: 20, right: 20, bottom: 80, left: 60 };
+      const innerW = width - margin.left - margin.right;
+      const innerH = height - margin.top - margin.bottom;
+
+      const svg = container.append("svg")
+        .attr("width", "100%")
+        .attr("viewBox", `0 0 ${width} ${height}`);
+
+      const g = svg.append("g")
+        .attr("transform", `translate(${margin.left},${margin.top})`);
+
+      const x = d3.scaleBand()
+        .domain(data.map(d => d.problem))
+        .range([0, innerW])
+        .padding(0.25);
+
+      const y = d3.scaleLinear()
+        .domain([0, d3.max(data, d => d.percent)]).nice()
+        .range([innerH, 0]);
+
+      g.append("g")
+        .attr("transform", `translate(0,${innerH})`)
+        .call(d3.axisBottom(x))
+        .selectAll("text")
+          .attr("transform", "rotate(-25)")
+          .style("text-anchor", "end")
+          .style("font-family", "PT Serif")
+          .style("font-size", "13px");
+
+      g.append("g")
+        .call(d3.axisLeft(y).tickFormat(d => d + "%"))
+        .selectAll("text")
+          .style("font-family", "PT Serif")
+          .style("font-size", "13px");
+
+      const tooltip = container.append("div")
+        .attr("class", "bar-tooltip");
+
+      g.selectAll("rect")
+        .data(data)
+        .enter()
+        .append("rect")
+          .attr("x", d => x(d.problem))
+          .attr("y", d => y(d.percent))
+          .attr("width", x.bandwidth())
+          .attr("height", d => innerH - y(d.percent))
+          .attr("fill", "#4b8b3b")
+          .on("mousemove", (event, d) => {
+            tooltip
+              .html(
+                `<strong>Problem Type:</strong> ${d.problem}<br>` +
+                `<strong>Percentage Yes:</strong> ${d.percent.toFixed(2)}%`
+              )
+              .style("left", (event.offsetX + 15) + "px")
+              .style("top", (event.offsetY + 15) + "px")
+              .style("opacity", 1);
+          })
+          .on("mouseleave", () => tooltip.style("opacity", 0));
+    }
+  </script>
+</body>
+</html>
